@@ -1,0 +1,7 @@
+*.pyc
+
+venv/
+.cache/
+notebooks/
+portus.egg-info/
+.idea/
