@@ -8,12 +8,17 @@ from pathlib import Path
 @click.command(context_settings={'help_option_names': ['--help', '-h']})
 @click.argument('file')
 @click.option('--overwrite', '-o', required=False, is_flag=True, default=False)
-def portus(file, overwrite):
+@click.option('--auto', '-a', required=False, is_flag=True, default=False)
+@click.option('--destination', '-d', required=False, default=None)
+def portus(file, overwrite, auto, destination):
     """Define a group of commands."""
     with open(file, 'r') as f:
         cells = [cell['source'] for cell in json.load(f)['cells']
                  if cell['cell_type'] == 'code' and cell['source']]
-    files = parse_cells(cells)
+    if auto:
+        files = parse_functions(file, cells, destination)
+    else:
+        files = parse_cells(cells)
     write_files(files, overwrite)
 
 
@@ -42,6 +47,26 @@ def parse_cells(cells):
                 click.echo(f'Empty port cell: {cell[:2]}...\n')
                 continue
             files[path].append(''.join(cell[1:]))
+    return files
+
+
+def parse_functions(file, cells, destination):
+    """
+    Parameters
+    -----------
+    file: str
+    cells: list
+    destination: str, None
+
+    Returns
+    --------
+    dict[str, list]: Maps filename to
+    """
+    dest = destination or file.rstrip('ipynb') + 'py'
+    files = {dest: []}
+    for cell in cells:
+        if cell[0].startswith('def ') or cell[0].startswith('class '):
+            files[dest].append(''.join(cell))
     return files
 
 
