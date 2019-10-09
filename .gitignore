@@ -5,3 +5,4 @@ venv/
 notebooks/
 portus.egg-info/
 .idea/
+.DS_STORE

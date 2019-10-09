@@ -2,6 +2,7 @@ import click
 from collections import defaultdict
 import json
 import os
+from pathlib import Path
 
 
 @click.command(context_settings={'help_option_names': ['--help', '-h']})
@@ -17,35 +18,69 @@ def portus(file, overwrite):
 
 
 def parse_cells(cells):
-    # Create dict mapping output filename to list of code chunks.
+    """Find cells with PORT command and store their code.
+
+    Parameters
+    -----------
+    cells: list
+        List of cells obtained within portus command.
+
+    Returns
+    --------
+    defaultdict[str, list]: Maps filenames to list of strings containing code
+        chunks.
+    """
+    cmd = '# PORT'
     files = defaultdict(list)
     for cell in cells:
-        if cell[0].startswith('# PORT'):
-            cmd = cell[0].split()
-            if len(cmd) != 3:
-                click.echo(f'Incomplete port command: {cell[0]}{cell[1]}...\n')
+        if cell[0].startswith(cmd):
+            path = cell[0].lstrip(cmd).rstrip('\n')
+            if not path:
+                click.echo(f'Incomplete port command: {cell[:2]}...\n')
                 continue
-            files[cmd[-1]].append(''.join(cell[1:]))
+            if not cell[1:]:
+                click.echo(f'Empty port cell: {cell[:2]}...\n')
+                continue
+            files[path].append(''.join(cell[1:]))
     return files
 
 
 def write_files(files, overwrite):
-    # Append code chunks to files.
+    """Write code chunks to files.
+
+    Parameters
+    -----------
+    files: defaultdict[str, list]
+        Dict returned by parse_cells function, mapping filename to list of
+        strings containing code chunks.
+    overwrite: bool
+        If True, files will be opened in write mode and old code will be
+        overwritten. If False, append new code to the end of the files.
+    """
     if overwrite:
         mode = 'w'
     else:
         mode = 'a'
+
     for file, chunks in files.items():
-        with open(f'{file}.py', mode) as f:
+        os.makedirs(Path(file).parent, exist_ok=True)
+        with open(file, mode) as f:
+            if mode == 'a':
+                f.write('\n\n')
             f.write('\n\n\n'.join(chunks) + '\n')
 
-    # TO DO:
-    # -refactor into mult funcs?
-    # -maybe more elegant way to handle overwrite flag
-    # -appending to file lacks empty line after prev last line
-    # -handle case where we want file to be in diff dir
-    # -add usr/bin... to first line?
-    # -add imports cell?
+
+"""
+    TO DO:
+    -maybe more elegant way to handle overwrite flag
+    -add imports cell automatically?
+        -add all cells starting with def automatically? but which file to put in?
+        -or auto create 2 files, 1 w/ all funcs and 1 w/ all loose code? maybe
+            add another click command that does this (just a simple alternative
+            to downloading nb as .py), but also allow more fine-grained control
+            if user wants to specify filenames in each cell.
+    -handle non functions to have 1 newline after instead of 2?
+"""
 
 
 if __name__ == '__main__':
