@@ -1,6 +1,7 @@
 import click
 from collections import defaultdict
 import json
+import os
 
 
 @click.command(context_settings={'help_option_names': ['--help', '-h']})
@@ -35,7 +36,7 @@ def write_files(files, overwrite):
     else:
         mode = 'a'
     for file, chunks in files.items():
-        with open(file, mode) as f:
+        with open(f'{file}.py', mode) as f:
             f.write('\n\n\n'.join(chunks) + '\n')
 
     # TO DO:
